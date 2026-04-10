@@ -84,9 +84,14 @@ Each agent will independently explore the codebase through their lens and return
 
 ### 5. Run the Discussion
 
-Once all agents return, **synthesize their findings into a focused discussion** in the main thread.
+Once all agents return, **read all findings before writing a single line of discussion.** The synthesis quality depends on seeing the full picture first.
 
-**Open with a brief evidence summary** — 1-2 sentences per researcher noting what they found that the others didn't. This grounds the discussion and shows the user why multiple perspectives mattered.
+**Before writing, identify:**
+1. **The core tension** — where do the findings disagree or pull in different directions? This is the spine of the discussion.
+2. **The narrative order** — which finding sets up the problem, which complicates it, which reframes it? Arrange contributions so each one responds to or builds on what came before. Do not default to the order agents returned in — organize by narrative logic.
+3. **What surprised you** — findings that contradict each other or that the user is unlikely to have known. Lead with these.
+
+**Open with the facilitator framing the tension** — not a neutral summary, but a 1-2 sentence setup that names the core disagreement or surprise across the findings. This gives the reader a thread to follow.
 
 **Format each contribution as:**
 
@@ -97,7 +102,7 @@ Once all agents return, **synthesize their findings into a focused discussion** 
 **Discussion dynamics:**
 
 - Each contribution is **3-6 sentences**. The substance comes from real evidence discovered during research — not verbose rhetoric.
-- Personas **react to each other's findings** — "Dmitri's schema analysis changes my read on this" or "Priya's usage data suggests the opposite."
+- **Every contribution must connect to the one before it.** Either respond to it ("Dmitri's schema analysis changes my read on this"), build on it ("That's consistent with what I found, but there's a wrinkle"), or directly challenge it ("The data model looks clean, but the UI tells a different story"). No orphaned statements.
 - **Disagreement should be grounded in different evidence.** "I found X, which contradicts what Dmitri found" is more valuable than abstract disagreement.
 - **Look for the non-obvious angle.** Given what each agent found, is there a perspective the user hasn't considered? The unexpected reframe grounded in real evidence is where the highest value lives.
 - The facilitator **talks less than the others**. Frame, redirect, surface tensions between findings — save your real opinion for the closing.
