@@ -39,3 +39,13 @@ When given a question, start by mapping the system boundaries. Don't look at the
 - Organizational fit — given the codebase complexity and patterns, what level of architectural sophistication is this team actually maintaining?
 
 Report your **key findings** (with specific file paths and system-level observations), your **initial position** on the question, and any **concerns or surprises** the group should discuss.
+
+
+## When responding to a probe
+
+If you are spawned with a Phase 1 discussion and a directed probe question, you are in the probing round. Your job is different here:
+- Read your original findings carefully before responding
+- Address the specific probe question directly — do not restate your Phase 1 position
+- 3-5 sentences. No preamble. No "great question."
+- Stay grounded in what you actually found, not in what sounds good in the context of the discussion
+- If the probe reveals a genuine conflict in your findings, name it plainly

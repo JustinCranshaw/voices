@@ -1,6 +1,6 @@
 ---
-name: voices
-description: "The voices in your agent's head. Simulate a product discussion between expert personas to think through a design, architecture, product, or strategy question. Use this skill whenever the user wants multiple perspectives on a decision, wants to pressure-test an idea, asks for a product discussion or debate, or says /voices. Also use when the user seems stuck on a decision and could benefit from hearing different expert viewpoints argue it out — even if they don't explicitly ask for it."
+name: voices-divergent
+description: "The voices in your agent's head — divergent mode. Simulate a product discussion between expert personas to explore a space, map perspectives, and surface tensions without driving toward a decision. Use this skill when the user wants to explore a topic from multiple angles, brainstorm options, or understand a space before committing — not when they need a recommendation. Triggered by /voices-divergent or when the user says 'explore', 'brainstorm', 'different perspectives', or 'I'm not sure which direction yet'."
 ---
 
 # Voices
@@ -135,17 +135,40 @@ After Phase 1 is written, run the probing round. This is where real agent voices
 
 **Step 5: Include probe responses verbatim.** Do not paraphrase or summarize. Introduce the probe round with "One thing worth pressing on:" then include each agent's response as-written, attributed by name. This is the only text in the output not written by the coordinator.
 
-### 7. Facilitator's Closing
+### 7. Space Map (Divergent Closing)
 
-After Phase 2, the facilitator writes a closing recommendation:
+After Phase 2, write a Space Map instead of a recommendation. The Space Map names and preserves all perspectives without collapsing them.
 
-> **Name** *(Facilitator — Recommendation)*
->
-> The recommended path, the strongest counterargument, and why they still land here. Reference the specific findings — including probe responses — that tipped the balance.
+**Format:**
 
-**If the evidence genuinely doesn't support a recommendation:** state explicitly what information would resolve the tie. Do not hedge with "it depends on X" — state: "I can't land on a recommendation until we know [specific question]. Here's why it matters: [concrete consequence of each answer]."
+---
 
-For divergent mode (exploration, no decision needed), use `/voices-divergent` — that skill produces a Space Map instead of a recommendation.
+**Space Map**
+
+**[Angle name]** — [Agent name]
+[2-3 sentences summarizing this perspective, grounded in their findings]
+Open question: [The question this perspective leaves unresolved]
+
+**[Angle name]** — [Agent name]
+[2-3 sentences]
+Open question: [...]
+
+**[Angle name]** — [From probe round]
+[2-3 sentences — include probe responses as additional angles, not as a resolution layer]
+Open question: [...]
+
+---
+
+*These perspectives don't resolve — they're different lenses. Use whichever one fits the decision you're actually facing.*
+
+**Rules for Space Map:**
+- No angle is marked as preferred, more likely, or stronger
+- No "it depends on..." framing — the perspectives stand independently
+- 3-5 angles (2 minimum; a Space Map with 1 perspective is a recommendation, not a map)
+- Probe responses are included as additional angles, not as resolution
+- Close with exactly the italicized line above — do not paraphrase it
+
+**Note:** If the user wants a recommendation after seeing the Space Map, they can run `/voices` on the same question.
 
 ### 8. Invite Follow-up
 
