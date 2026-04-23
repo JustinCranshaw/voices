@@ -1,6 +1,6 @@
 ---
 name: voices
-description: "The voices in your agent's head. Simulate a product discussion between expert personas to think through a design, architecture, product, or strategy question. Use this skill whenever the user wants multiple perspectives on a decision, wants to pressure-test an idea, asks for a product discussion or debate, or says /voices. Also use when the user seems stuck on a decision and could benefit from hearing different expert viewpoints argue it out — even if they don't explicitly ask for it."
+description: "The voices in your agent's head. Simulate a live product discussion between expert personas to think through a design, architecture, product, or strategy question. Two modes: convergent (lands a recommendation) and divergent (maps the space without choosing). Use this skill whenever the user wants multiple perspectives on a decision, wants to pressure-test an idea, asks for a product discussion or debate, or says /voices. Also use when the user wants to explore a space, brainstorm options, or says 'explore', 'brainstorm', 'map the tradeoffs', or 'I'm not sure which direction yet' — that's divergent mode. Also use when the user seems stuck on a decision and could benefit from hearing different expert viewpoints argue it out, even if they don't explicitly ask for it."
 ---
 
 # Voices
@@ -33,9 +33,24 @@ Eight agents are available in `agents/`. Each has a distinct research approach a
 
 Marcus and Priya are the current facilitator candidates — they have the facilitator modes defined. Other agents serve as researchers.
 
+## Convergent vs. divergent mode
+
+The skill has two closing shapes. Everything up through the live discussion is identical; only step 9 differs.
+
+- **Convergent** — the discussion lands a recommendation. Use when the user wants a decision, has asked "should we…", "which should we pick", "is this the right call", or is blocked on a choice.
+- **Divergent** — the discussion closes with a Space Map that preserves the perspectives instead of collapsing them. Use when the user wants to explore, brainstorm, map tradeoffs, or has said "I'm not sure which direction yet", "explore the options", "what are the angles here", etc.
+
+**If the mode is ambiguous from the user's query, ask them before selecting the panel.** One short question, two options:
+
+> Before I spin this up — do you want me to land a recommendation, or map out the perspectives without choosing?
+
+Use AskUserQuestion with two options: "Recommendation (convergent)" and "Space Map (divergent)". Do not default to one. Ambiguity is a real signal — ask.
+
+Only skip the question when the user's language clearly picks a mode (e.g., "help me decide between A and B" → convergent; "what are the different ways to think about X" → divergent).
+
 ## Workflow
 
-The workflow is a 10-step state machine. Steps 1–3 are unchanged from prior versions; steps 4–9 replace the old synthesized "Phase 1 / Phase 2 / Closing" format with a serial, spawned discussion.
+The workflow is a 10-step state machine. Everything from step 1 through step 8 is identical regardless of mode. Only step 9 (the closing) differs.
 
 ### Step 1 — Sharpen the question
 
@@ -43,6 +58,7 @@ This is where most of the value lives. Before doing anything else:
 
 - **Review session context** — what the user has been working on, what decisions are pending, what they've already tried or considered.
 - **Distill the query** into a crisp, specific framing. If it's vague, make it precise. If it's multiple questions, identify the primary one.
+- **Decide the mode** (convergent or divergent) using the rules above. If ambiguous, ask the user.
 
 ### Step 2 — Select the panel
 
@@ -250,9 +266,9 @@ Include output verbatim with the normal attribution prefix.
 
 ### Step 9 — Facilitator closing (1 spawn)
 
-Spawn the facilitator with `mode=closing_convergent`.
+Spawn the facilitator. The mode — and the scaffolding — depends on the decision made in step 1.
 
-Spawn prompt scaffolding:
+**Convergent mode** — spawn with `mode=closing_convergent`:
 
 ```
 You are the facilitator in the /voices skill, writing the closing. See your agent file's "## When closing (convergent)" section for exact mode instructions.
@@ -267,7 +283,20 @@ Land a recommendation. Ground it in specific turns from the conversation — ref
 
 Include verbatim, prefixed with `**<Name>** *(Facilitator — Recommendation)*`.
 
-For divergent mode (exploration, no decision), use `/voices-divergent` — that skill spawns the facilitator with `mode=closing_divergent` instead.
+**Divergent mode** — spawn with `mode=closing_divergent`:
+
+```
+You are the facilitator in the /voices skill, writing the Space Map closing. See your agent file's "## When closing (divergent)" section for exact mode instructions.
+
+**Mode:** closing_divergent
+
+**Sharpened question:** <question>
+**Discussion so far (verbatim):** <everything emitted, including the user's reply and the continuation>
+
+Write the Space Map. The perspectives stand independently — no angle is preferred, there is no "it depends on" framing, 3–5 angles total (minimum 2). Include the continuation response as an additional angle if it added a distinct lens, not as a resolution layer. Close with exactly the italicized line your agent file specifies — do not paraphrase it.
+```
+
+Include verbatim, prefixed with `**<Name>** *(Facilitator — Space Map)*`. Format the Space Map exactly as specified in the facilitator's agent file (`## When closing (divergent)`) — do not reformat.
 
 ### Step 10 — Invite follow-up
 

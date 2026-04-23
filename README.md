@@ -55,8 +55,7 @@ Not all eight show up. The skill picks the 2-3 whose expertise creates the most 
 
 ```
 voices/
-├── SKILL.md              # Orchestrator — sharpens question, selects panel, sequences spawns
-├── SKILL-divergent.md    # Same flow; closes with a Space Map instead of a recommendation
+├── SKILL.md              # Orchestrator — sharpens question, picks mode, selects panel, sequences spawns
 ├── agents/
 │   ├── mara.md           # Each persona is an independent agent
 │   ├── jonas.md           # with its own system prompt,
@@ -68,6 +67,8 @@ voices/
 │   └── kai.md             #
 └── README.md
 ```
+
+The skill has two closing modes — **convergent** (lands a recommendation) and **divergent** (maps the space without choosing). Both share the same discussion flow; the mode only changes the final spawn. The orchestrator picks the mode based on the user's language, and asks when it's ambiguous.
 
 The key insight: each agent's "How you think" section isn't flavor text — it's a functional research directive. Dmitri's "start from the data model" means he actually reads the schema first. Priya's "interrogate the framing" means she checks git history and past decisions before forming a position. The diversity of investigation is structural, not simulated.
 
