@@ -5,17 +5,18 @@ description: "The voices in your agent's head. Simulate a product discussion bet
 
 # Voices
 
-The voices in your agent's head. Expert personas who independently research your question through their own lens, then come together to debate what they found and drive toward a recommendation.
+The voices in your agent's head. Expert personas who independently research your question, then come together for a live discussion the reader can actually follow — one voice at a time, with a real user checkpoint midway through.
 
 ## Architecture
 
-Voices uses a **research-then-discuss** pattern. Each selected persona is a real subagent (defined in `agents/`) that gets spawned with its own isolated context to explore the codebase independently. A coordinator (you) then synthesizes their findings into a focused discussion.
+Voices uses a **research-then-discuss** pattern. Each selected persona is a real subagent (defined in `agents/`) that gets spawned with its own isolated context to explore the codebase independently. The discussion that follows is also spawned, turn by turn — every in-world voice is a real subagent call, never synthesized by the coordinator.
 
 This matters because:
 - Each agent genuinely explores different files and forms its own view — Dmitri reads the schema while Mara reads the components while Priya checks the git history. The diversity of investigation is structural, not simulated.
-- The "How you think" and "How you research" sections in each agent's system prompt are functional directives, not flavor text. They determine what each agent actually goes and looks at.
+- Each turn in the discussion is spawned with only the prior turns as context, so evidence unfolds naturally. No voice knows what a later voice is going to say. No voice summarizes another's findings before that voice has spoken them aloud.
+- The facilitator is a real character the reader hears from repeatedly — cold open, between-turn interjections, a midpoint pause that invites the user in, and the closing. They are not a narrator. They are a guide.
 
-## The Team
+## The team
 
 Eight agents are available in `agents/`. Each has a distinct research approach and area of expertise:
 
@@ -26,38 +27,38 @@ Eight agents are available in `agents/`. Each has a distinct research approach a
 | **priya** | Principal User Researcher | Interrogates the framing; checks git history, actual usage, and whether the right question is being asked |
 | **dmitri** | Staff Backend Engineer | Starts from the data model; reads schema, queries, and failure modes |
 | **eleanor** | Distinguished Engineer | Maps system boundaries; looks upstream, downstream, and at the constraint set |
-| **marcus** | Chief Product Officer | Zooms between strategy and detail; frames decisions as clear choices between real options |
+| **marcus** | Chief Product Officer | Zooms between strategy and detail; frames decisions as clear choices between real options. Can facilitate. |
 | **soleil** | Creative Director | Senses the product's character; examines naming, language, voice, and the impression it makes |
 | **kai** | AI Engineer | Decomposes into judgment vs. deterministic; audits complexity and finds the simplest version that works |
 
+Marcus and Priya are the current facilitator candidates — they have the facilitator modes defined. Other agents serve as researchers.
+
 ## Workflow
 
-### 1. Sharpen the Question
+The workflow is a 10-step state machine. Steps 1–3 are unchanged from prior versions; steps 4–9 replace the old synthesized "Phase 1 / Phase 2 / Closing" format with a serial, spawned discussion.
+
+### Step 1 — Sharpen the question
 
 This is where most of the value lives. Before doing anything else:
 
 - **Review session context** — what the user has been working on, what decisions are pending, what they've already tried or considered.
 - **Distill the query** into a crisp, specific framing. If it's vague, make it precise. If it's multiple questions, identify the primary one.
 
-### 2. Select the Panel
+### Step 2 — Select the panel
 
-Choose **2-3 researcher agents** plus a **facilitator**.
+Choose **2–3 researcher agents** plus **1 facilitator** (marcus or priya).
 
 Selection principles:
 - **Match expertise to the question.** A database schema discussion needs dmitri and eleanor, not soleil.
 - **Pick agents whose research approaches will produce different evidence.** The value is in diversity of *investigation*. If two agents would look at the same files, one probably isn't needed.
 - **Include at least one contrarian perspective.** If the question leans technical, include someone who will push on the user impact. If it's a product question, include someone who will ground it in implementation.
-- **The facilitator is the person with the broadest view of the specific problem.** They run the discussion and give the closing recommendation, but do not do independent research — their job is synthesis.
+- **The facilitator is the person with the broadest view of the specific problem.** They run the discussion — they do not do independent research.
 
-Do not include more than 3 researchers + 1 facilitator.
+Do not include more than 3 researchers + 1 facilitator. If the facilitator's expertise is also core to the question, they may still be listed as facilitator only; the researchers do the investigation.
 
-### 3. Present the Setup
+### Step 3 — Present the setup and spawn research
 
-Before spawning agents, present the user with:
-
-**The question** — a 1-2 sentence restatement, sharpened from the user's original query.
-
-**The panel** — each agent, their research angle, and who's facilitating:
+Before spawning agents, present the user with the sharpened question and the panel:
 
 > **Question**: Should we split the API into separate read and write services?
 >
@@ -65,96 +66,249 @@ Before spawning agents, present the user with:
 > - **dmitri** — will examine the schema, query patterns, and data flow
 > - **eleanor** — will map system boundaries and operational complexity
 > - **priya** — will check how API consumers actually use the endpoints
-> - **marcus** *(facilitating)* — will synthesize into a product-aware recommendation
+> - **marcus** *(facilitating)* — will frame, guide, and land the discussion
 
 Proceed directly — no pause for confirmation unless the user stops you.
 
-### 4. Research Phase — Spawn Agents
+Spawn each researcher **in parallel** using the Agent tool with the agent's `name:` as `subagent_type`. Each receives:
+1. The sharpened question
+2. A targeted research brief — what to look at, derived from their expertise
+3. Session context — a summary of what the user has been working on
 
-Spawn each researcher agent **in parallel** using the Agent tool. Each agent receives:
+Each agent returns: **Key findings** (with file paths), **Initial position**, **Concerns or surprises**.
 
-1. **The sharpened question**
-2. **A targeted research brief** — what to look at, derived from their expertise (their agent system prompt already guides their research approach)
-3. **Session context** — a summary of what the user has been working on
+Do NOT spawn the facilitator here. The facilitator does not research; they guide the discussion that follows.
 
-Each agent will independently explore the codebase through their lens and return:
-- **Key findings** — what they discovered, with specific file paths and evidence
-- **Initial position** — their take on the question, grounded in what they found
-- **Concerns or surprises** — anything unexpected the group should discuss
+### Step 4 — Facilitator cold open (1 spawn)
 
-### 5. Phase 1: Opening Positions
+Once all researcher findings have returned, spawn the facilitator agent with `mode=cold_open`.
 
-Once all agents return, **read all findings before writing a single line of discussion.** The synthesis quality depends on seeing the full picture first.
+The cold open's job: frame the question in the facilitator's voice, name the tension they *expect* the panel will surface, set up anticipation for the reader. **The cold open does NOT name any researcher findings** — those are each researcher's to disclose in their own turn.
 
-Phase 1 is synthetic — you write all positions. This is intentional. Its job is to compress findings into a scannable surface so agents in Phase 2 have shared ground to react to.
+Spawn prompt scaffolding:
 
-**Before writing, identify:**
-1. **The core tension** — where do the findings disagree or pull in different directions? This is the spine of the discussion.
-2. **The narrative order** — arrange positions so each one either (a) names a new dimension of the problem, (b) complicates a claim from the prior position, or (c) reframes the question. Default to starting with the most grounded/empirical finding and ending with the most interpretive. Do not default to the order agents returned in.
-3. **What surprised you** — findings that contradict each other or that the user is unlikely to have known. Lead with these.
+```
+You are in the /voices skill as the facilitator. This is your COLD OPEN — the first thing the reader sees after the panel is introduced. See your agent file's "## When opening the discussion" section for exact mode instructions.
 
-**Open with the facilitator framing the tension** — not a neutral summary, but a 1-2 sentence setup that names the core disagreement or surprise across the findings.
+**Mode:** cold_open
 
-**Format each contribution as:**
+**Sharpened question:** <question>
 
-> **Name** *(Role)*
->
-> Their contribution, grounded in their specific findings.
+**Panel** (what each researcher investigated — not what they found):
+- dmitri — examined the schema, query patterns, and data flow
+- eleanor — mapped system boundaries and operational complexity
+- priya — checked how API consumers actually use the endpoints
 
-**Discussion dynamics:**
+**Session context:** <1-paragraph summary of what the user has been working on>
 
-- Each contribution is **3-6 sentences**. Substance comes from real evidence, not rhetoric.
-- **Every contribution must explicitly connect to the one before it.** Either respond to it ("Dmitri's schema analysis changes my read on this"), build on it ("That's consistent with what I found, but there's a wrinkle"), or directly challenge it ("The data model looks clean, but the UI tells a different story"). No orphaned statements.
-- **Disagreement should be grounded in different evidence.** "I found X, which contradicts what Dmitri found" is more valuable than abstract disagreement.
-- **Look for the non-obvious angle.** The unexpected reframe grounded in real evidence is where the highest value lives.
-- The facilitator **talks less than the others**. Frame, redirect, surface tensions — save your real opinion for the closing.
+Frame the question. Name the tension you expect will surface. Do not name any findings — the researchers will speak for themselves. 3–5 sentences, in your voice.
+```
 
-**Word count:** Phase 1 should run 300-500 words. It is the setup, not the conclusion.
+Include the facilitator's output verbatim in the discussion. Prefix with:
 
-### 6. Phase 2: Probing Round
+> **Marcus** *(Facilitator)*
 
-After Phase 1 is written, run the probing round. This is where real agent voices enter.
+### Step 5 — Serial opening turns (N × 2 spawns)
 
-**Step 1: Check for genuine tension.** If Phase 1 positions are fully aligned — no meaningful disagreement, no contradicting evidence — skip Phase 2 entirely and state: "Positions are aligned — no probe needed." Then proceed directly to the closing.
+The orchestrator now builds the discussion turn by turn. For each researcher in an order chosen for narrative quality — most grounded/empirical first, most interpretive last, NOT the order they returned research in — do two spawns:
 
-**Step 2: Identify the sharpest tension.** Name the single most important unresolved disagreement between Phase 1 positions. Not a summary — a specific question. Example: "Dmitri found the schema is already partitioned by tenant. Priya's position assumes a single-tenant mental model. The question is: does the data model actually reflect how users think about their workspace?"
+**5a. Researcher speaking turn** (one spawn per researcher, `mode=speaking_turn`)
 
-**Step 3: Select 1-2 agents to probe.**
-- Primary rule: pick the two agents whose Phase 1 positions are most directly contradicted by each other's evidence.
-- Secondary rule: if a third agent has domain expertise directly relevant to the tension (even if their Phase 1 position didn't engage with it), they may be substituted for one of the primary pair.
-- Never probe more than 2 agents in a single round.
+Spawn prompt scaffolding:
 
-**Step 4: Spawn the probe.** Each selected agent receives, in order:
-- The original question
-- Their own original research findings (the full text returned in the research phase)
-- The full Phase 1 discussion text
-- A narrow, concrete directed question from you. Format: "[Agent A] found [specific claim]. [Agent B] found [specific claim]. These seem to conflict at [specific point]. Address that conflict directly." Do not ask open-ended questions — require a specific response to a specific tension.
-- Instruction: "Respond in 3-5 sentences. Ground your answer in your original research findings. Do not restate your Phase 1 position — address the probe question directly."
+```
+You are in the /voices skill, entering a live discussion in progress. See your agent file's "## When delivering a speaking turn" section for exact mode instructions.
 
-**On context length:** If findings + Phase 1 discussion exceeds ~4000 tokens, truncate Phase 1 to the moderator's tension frame plus the two positions being probed. Never truncate the agent's own original findings.
+**Sharpened question:** <question>
 
-**Step 5: Include probe responses verbatim.** Do not paraphrase or summarize. Introduce the probe round with "One thing worth pressing on:" then include each agent's response as-written, attributed by name. This is the only text in the output not written by the coordinator.
+**Your research findings (verbatim):**
+<full text of findings, initial position, concerns/surprises from step 3>
 
-### 7. Facilitator's Closing
+**Discussion so far (verbatim):**
+<everything emitted since the cold open, including each prior researcher turn and facilitator interjection, attributed by name and role>
 
-After Phase 2, the facilitator writes a closing recommendation:
+It is now your turn. Present your own evidence in your own voice. React to what has been said when it is relevant — build on, complicate, or challenge. Do not summarize others' findings; they already spoke them. 4–7 sentences.
+```
 
-> **Name** *(Facilitator — Recommendation)*
->
-> The recommended path, the strongest counterargument, and why they still land here. Reference the specific findings — including probe responses — that tipped the balance.
+Include the output verbatim, prefixed with:
 
-**If the evidence genuinely doesn't support a recommendation:** state explicitly what information would resolve the tie. Do not hedge with "it depends on X" — state: "I can't land on a recommendation until we know [specific question]. Here's why it matters: [concrete consequence of each answer]."
+> **<Name>** *(Role)*
 
-For divergent mode (exploration, no decision needed), use `/voices-divergent` — that skill produces a Space Map instead of a recommendation.
+**5b. Facilitator interjection** (one spawn between researchers, `mode=interjection`)
 
-### 8. Invite Follow-up
+After each researcher turn EXCEPT the last, spawn the facilitator with `mode=interjection`:
+
+```
+You are the facilitator in the /voices skill, interjecting between researcher turns. See your agent file's "## When interjecting" section for exact mode instructions.
+
+**Mode:** interjection (between-turn)
+
+**Sharpened question:** <question>
+
+**Discussion so far (verbatim):**
+<everything emitted so far>
+
+One short interjection. 1–3 sentences. Pick one: name a tension that just surfaced, connect two findings, or press on a claim. Do not summarize. This is a bridge, not a recap.
+```
+
+Include verbatim, prefixed with `**<Name>** *(Facilitator)*`.
+
+The last researcher does not get a facilitator interjection after them — the pause (step 6) takes that slot instead.
+
+### Step 6 — The pause (1 spawn, guaranteed)
+
+After the last researcher has spoken, spawn the facilitator with `mode=pause_prompt`.
+
+Spawn prompt scaffolding:
+
+```
+You are the facilitator in the /voices skill, pausing the discussion for the user's input. See your agent file's "## When pausing for the user" section for exact mode instructions.
+
+**Mode:** pause_prompt
+
+**Sharpened question:** <question>
+
+**Full panel** (for reference if suggesting a bring-in):
+- In the room: <researcher names>
+- Not in the room: <names of agents not in the current panel, e.g. mara, jonas, soleil, kai, eleanor>
+
+**Discussion so far (verbatim):**
+<everything emitted so far>
+
+Write a pause turn in your voice. Recap briefly where the discussion sits, name the sharpest tension as you see it, then invite the user in with 2–3 concrete suggestions for what to press on. Prose, not a UI menu. End with a genuine question. See the worked example in your agent file for tone.
+```
+
+Include verbatim, prefixed with `**<Name>** *(Facilitator)*`.
+
+**Then stop.** The orchestrator prints the pause output and halts. Wait for the user's next message. Do not proceed until the user replies.
+
+### Step 7 — Route the user's reply
+
+When the user replies, read their message and categorize it. You have four routes:
+
+| User reply pattern | Route | Step 8 spawn |
+|---|---|---|
+| Names a researcher already in the panel + some form of "press them on X" | **probe** | That researcher, `mode=speaking_turn`, with the user's probe question inline |
+| Names an agent NOT in the panel (mara, jonas, kai, etc.) | **bring-in** | That fresh agent, `mode=speaking_turn`, with reason-for-inclusion in the prompt |
+| Challenges the premise, reframes the question, or picks up a thread the facilitator flagged | **reframe** | Facilitator, `mode=interjection`, with the user's reframe inline |
+| Anything else / unclear / short acknowledgments | **facilitator-reacts** | Facilitator, `mode=interjection`, with the user's raw text |
+
+Use judgment — the user's language is natural, not structured. If they name an agent, route to that agent. If they say "isn't this actually a question about X?" that's a reframe. If they say "close it out" or "you pick," the reframe/react route will land it toward closing.
+
+### Step 8 — Continuation (1 spawn)
+
+Spawn per the route table above. All continuation spawns get the verbatim "Discussion so far" block plus the user's reply (clearly labeled so the agent knows the user's voice is not a researcher's).
+
+For a **probe**:
+
+```
+You are in the /voices skill. You were in the opening panel, and the user has asked you a specific follow-up. See your agent file's "## When delivering a speaking turn" section for exact mode instructions.
+
+**Sharpened question:** <question>
+**Your research findings (verbatim):** <full findings>
+**Discussion so far (verbatim):** <everything emitted so far>
+
+**The user just said:**
+> <user's verbatim reply>
+
+Address the user's follow-up directly, grounded in your original findings. 4–6 sentences.
+```
+
+For a **bring-in** (agent not in original panel):
+
+```
+You are in the /voices skill. You were NOT in the original panel — you are being brought in now because the user specifically asked for your perspective. See your agent file's "## When delivering a speaking turn" section for exact mode instructions.
+
+**Sharpened question:** <question>
+
+**Discussion so far (verbatim):**
+<everything emitted so far>
+
+**The user asked for you specifically:**
+> <user's verbatim reply>
+
+You have NOT done dedicated research on this question. Enter the discussion with what you can see from what's been said, your own expertise, and targeted codebase reads only as needed. 4–6 sentences. Your job is to add a dimension the panel missed.
+```
+
+For **reframe** and **facilitator-reacts**:
+
+```
+You are the facilitator in the /voices skill. The user has spoken. See your agent file's "## When interjecting" section for exact mode instructions — specifically the user-reply sub-rule.
+
+**Mode:** interjection (user-reply)
+
+**Sharpened question:** <question>
+**Discussion so far (verbatim):** <everything emitted so far>
+
+**The user just said:**
+> <user's verbatim reply>
+
+Respond in your voice. Take the user's point seriously. If they reframed the question, acknowledge the reframe and set up the closing around it. If they handed it back to you ("you pick"), prepare the landing.
+```
+
+Include output verbatim with the normal attribution prefix.
+
+### Step 9 — Facilitator closing (1 spawn)
+
+Spawn the facilitator with `mode=closing_convergent`.
+
+Spawn prompt scaffolding:
+
+```
+You are the facilitator in the /voices skill, writing the closing. See your agent file's "## When closing (convergent)" section for exact mode instructions.
+
+**Mode:** closing_convergent
+
+**Sharpened question:** <question>
+**Discussion so far (verbatim):** <everything emitted, including the user's reply and the continuation>
+
+Land a recommendation. Ground it in specific turns from the conversation — reference what people actually said, not findings from research that never made it into the discussion. State the strongest counterargument and why you still land here. If the evidence genuinely doesn't support a recommendation, state what information would resolve the tie — do not hedge.
+```
+
+Include verbatim, prefixed with `**<Name>** *(Facilitator — Recommendation)*`.
+
+For divergent mode (exploration, no decision), use `/voices-divergent` — that skill spawns the facilitator with `mode=closing_divergent` instead.
+
+### Step 10 — Invite follow-up
 
 > Push back on any of this, ask to hear from someone who wasn't in the room, or pick a thread to go deeper on.
 
-## What Makes Good Voices
+## Building the "Discussion so far" block
+
+Every spawn from step 5 onwards receives a verbatim running block of everything in the discussion. Format:
+
+```
+**Marcus** *(Facilitator)*
+<cold open text>
+
+**Dmitri** *(Staff Backend Engineer)*
+<dmitri's speaking turn>
+
+**Marcus** *(Facilitator)*
+<interjection>
+
+**Eleanor** *(Distinguished Engineer)*
+<eleanor's speaking turn>
+
+...
+```
+
+Append to this block after every in-world turn is rendered. Never summarize, paraphrase, or truncate — pass it verbatim to each new spawn. If the total context gets very large (unlikely at 8–12 turns of ~100 words each), prefer truncating the oldest non-facilitator turns first, but this should rarely be needed.
+
+## Orchestrator rules (non-negotiable)
+
+- Every in-world voice — cold open, every researcher turn, every interjection, pause, continuation, closing — is a **real subagent spawn**. Never write in a persona's voice yourself.
+- Include every agent output **verbatim**. Do not paraphrase, re-edit, or blend.
+- The orchestrator's own voice appears only in structural elements: the panel presentation in step 3, the attribution labels (`**Name** *(Role)*`), and the step-10 invitation.
+- At step 6, **stop**. Do not proceed until the user replies.
+- No opportunistic pauses in v1. One user checkpoint, guaranteed, at step 6.
+
+## What makes good voices
 
 - Each researcher **found something different** — if they all looked at the same files and reached the same conclusion, the multi-agent approach didn't earn its cost.
 - The discussion surfaces **tradeoffs grounded in real evidence**, not abstract opinions.
-- The closing is **specific and actionable**.
-- The user learns things about their own codebase they didn't know before.
+- Evidence unfolds **one voice at a time** — no turn references a finding before the speaker who found it has spoken.
+- The facilitator feels like a **guide**, not a narrator — reacting in the moment, not summarizing.
+- The pause invites the user in at a **real fork**, not as a procedural checkpoint.
+- The closing is **specific and actionable**, grounded in the conversation the reader just lived through.
 - The user feels invited to **push back or go deeper**.
